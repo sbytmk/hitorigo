@@ -758,7 +758,7 @@ function addMessage(role, text) {
     t.textContent = formatTime();
     wrap.appendChild(t);
   }
-  conv.insertBefore(wrap, typing);
+  conv.appendChild(wrap);
   setTimeout(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50);
 }
 
