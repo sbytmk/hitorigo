@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#f7f5f0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ひとり言">
+<meta name="mobile-web-app-capable" content="yes">
+<title>ひとり言</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@300;400;500&family=Noto+Serif+JP:wght@300;400&display=swap" rel="stylesheet">
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --ink: #1a1a1a;
+  --ink-muted: #6b6b6b;
+  --ink-faint: #b0b0b0;
+  --surface: #f7f5f0;
+  --surface-alt: #edeae3;
+  --border: rgba(0,0,0,0.1);
+  --font-round: 'M PLUS Rounded 1c', 'Meiryo', 'メイリオ', sans-serif;
+  --font-serif: 'Noto Serif JP', serif;
+}
+
+html, body {
+  height: 100%;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+body {
+  font-family: var(--font-round);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+/* ─── Header ─── */
+#header {
+  padding: 16px 20px 12px;
+  border-bottom: 0.5px solid var(--border);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+#header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2px;
+}
+
+#date-label {
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--ink-faint);
+  letter-spacing: 0.1em;
+}
+
+#settings-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-faint);
+  font-size: 18px;
+  padding: 4px;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app-title {
+  font-family: var(--font-round);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--ink);
+  letter-spacing: 0.03em;
+}
+
+#streak-bar {
+  display: flex;
+  gap: 5px;
+  margin-top: 10px;
+  align-items: center;
+}
+
+.streak-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--surface-alt);
+}
+
+.streak-dot.active { background: var(--ink); }
+
+#streak-label {
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin-left: 6px;
+}
+
+/* ─── API Setup ─── */
+#api-setup {
+  display: none;
+  flex-direction: column;
+  padding: 32px 24px;
+  gap: 18px;
+  flex: 1;
+  justify-content: center;
+}
+
+#api-setup.visible { display: flex; }
+
+.setup-title {
+  font-size: 18px;
+  font-weight: 400;
+  color: var(--ink);
+  line-height: 1.6;
+}
+
+.setup-desc {
+  font-size: 13px;
+  color: var(--ink-muted);
+  line-height: 1.8;
+}
+
+.setup-link {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+#api-key-input {
+  width: 100%;
+  background: var(--surface-alt);
+  border: none;
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-round);
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+#api-key-input::placeholder { color: var(--ink-faint); }
+
+#save-key-btn {
+  background: var(--ink);
+  color: var(--surface);
+  border: none;
+  border-radius: 24px;
+  padding: 11px 24px;
+  font-family: var(--font-round);
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  align-self: flex-end;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.setup-note {
+  font-size: 11px;
+  color: var(--ink-faint);
+  line-height: 1.7;
+}
+
+/* ─── Main conversation ─── */
+#main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  -webkit-overflow-scrolling: touch;
+}
+
+#main.hidden { display: none; }
+
+#conversation {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+
+.msg-ai { align-self: flex-start; max-width: 90%; }
+
+.msg-ai-text {
+  font-family: var(--font-round);
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.9;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+
+.msg-user {
+  align-self: flex-end;
+  max-width: 85%;
+  background: var(--surface-alt);
+  border-radius: 14px 14px 3px 14px;
+  padding: 11px 15px;
+}
+
+.msg-user-text {
+  font-family: var(--font-round);
+  font-size: 15px;
+  font-weight: 300;
+  line-height: 1.75;
+  color: var(--ink);
+}
+
+.msg-time {
+  font-size: 10px;
+  color: var(--ink-faint);
+  margin-top: 5px;
+  text-align: right;
+}
+
+#typing-indicator {
+  align-self: flex-start;
+  display: none;
+  gap: 5px;
+  padding: 10px 0;
+  align-items: center;
+}
+
+#typing-indicator.visible { display: flex; }
+
+.typing-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-faint);
+  animation: pulse 1.3s ease-in-out infinite;
+}
+
+.typing-dot:nth-child(2) { animation-delay: 0.22s; }
+.typing-dot:nth-child(3) { animation-delay: 0.44s; }
+
+@keyframes pulse {
+  0%, 80%, 100% { opacity: 0.25; transform: scale(0.75); }
+  40% { opacity: 1; transform: scale(1); }
+}
+
+/* ─── Input area ─── */
+#input-area {
+  border-top: 0.5px solid var(--border);
+  padding: 12px 16px env(safe-area-inset-bottom, 12px);
+  background: var(--surface);
+  flex-shrink: 0;
+}
+
+#input-area.hidden { display: none; }
+
+#journal-input {
+  width: 100%;
+  min-height: 72px;
+  max-height: 150px;
+  background: var(--surface-alt);
+  border: none;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font-family: var(--font-round);
+  font-size: 15px;
+  font-weight: 300;
+  color: var(--ink);
+  line-height: 1.75;
+  resize: none;
+  outline: none;
+  -webkit-appearance: none;
+  display: block;
+}
+
+#journal-input::placeholder { color: var(--ink-faint); }
+
+#input-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+}
+
+#char-count { font-size: 11px; color: var(--ink-faint); }
+
+#send-btn {
+  background: var(--ink);
+  color: var(--surface);
+  border: none;
+  border-radius: 22px;
+  padding: 8px 20px;
+  font-family: var(--font-round);
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  min-height: 40px;
+  min-width: 72px;
+}
+
+#send-btn:disabled { opacity: 0.28; cursor: default; }
+#send-btn:not(:disabled):active { opacity: 0.7; transform: scale(0.97); }
+
+/* ─── Settings modal ─── */
+#settings-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 100;
+  align-items: flex-end;
+}
+
+#settings-modal.visible { display: flex; }
+
+#settings-panel {
+  background: var(--surface);
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  border-radius: 20px 20px 0 0;
+  padding: 24px 24px calc(24px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#settings-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.settings-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.settings-label {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+
+#settings-api-input {
+  width: 100%;
+  background: var(--surface-alt);
+  border: none;
+  border-radius: 10px;
+  padding: 11px 13px;
+  font-family: var(--font-round);
+  font-size: 13px;
+  color: var(--ink);
+  outline: none;
+}
+
+.settings-btn-row {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btn-secondary {
+  background: var(--surface-alt);
+  color: var(--ink-muted);
+  border: none;
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-family: var(--font-round);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: var(--surface);
+  border: none;
+  border-radius: 20px;
+  padding: 8px 18px;
+  font-family: var(--font-round);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settings-danger {
+  font-size: 12px;
+  color: #c0392b;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-round);
+  text-align: left;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div id="header">
+  <div id="header-top">
+    <span id="date-label"></span>
+    <button id="settings-btn" title="設定">⚙</button>
+  </div>
+  <div id="app-title"></div>
+  <div id="streak-bar">
+    <span id="streak-label"></span>
+  </div>
+</div>
+
+<!-- API Setup (初回のみ) -->
+<div id="api-setup">
+  <p class="setup-title">はじめまして。<br>APIキーを設定してください。</p>
+  <p class="setup-desc">
+    Anthropic APIキーを入力すると、このアプリが動き始めます。<br>
+    キーはこのデバイスにのみ保存されます。<br><br>
+    取得先：<a class="setup-link" href="https://console.anthropic.com" target="_blank">console.anthropic.com</a>
+  </p>
+  <input id="api-key-input" type="password" placeholder="sk-ant-..." autocomplete="off" />
+  <button id="save-key-btn">保存して始める</button>
+  <p class="setup-note">※ APIの利用料金はAnthropicに直接支払われます（月額数百円程度）。このアプリは料金を請求しません。</p>
+</div>
+
+<!-- Main -->
+<div id="main" class="hidden">
+  <div id="conversation"></div>
+  <div id="typing-indicator">
+    <div class="typing-dot"></div>
+    <div class="typing-dot"></div>
+    <div class="typing-dot"></div>
+  </div>
+</div>
+
+<!-- Input -->
+<div id="input-area" class="hidden">
+  <textarea id="journal-input"></textarea>
+  <div id="input-footer">
+    <span id="char-count">0</span>
+    <button id="send-btn" disabled>送る</button>
+  </div>
+</div>
+
+<!-- Settings modal -->
+<div id="settings-modal">
+  <div id="settings-panel">
+    <p id="settings-title">設定</p>
+    <div class="settings-row">
+      <p class="settings-label">APIキー</p>
+      <input id="settings-api-input" type="password" placeholder="sk-ant-..." />
+    </div>
+    <div class="settings-btn-row">
+      <button class="btn-secondary" id="settings-cancel">キャンセル</button>
+      <button class="btn-primary" id="settings-save">保存</button>
+    </div>
+    <button class="settings-danger" id="clear-data-btn">記録をすべて削除する</button>
+  </div>
+</div>
+
+<script>
+const SYSTEM_PROMPT = `あなたはユーザーの個人ジャーナリングの対話相手です。
+毎晩、あるいは日中の隙間時間に、ユーザーは思いを書き留めます。
+あなたはそれを読み、短く応答します。
+
+# 在り方
+
+あなたは静かな観察者です。村上春樹の小説に出てくる「J」のような存在を想像してください。
+カウンターの向こうで黙ってグラスを磨きながら、客の話を聞いている。
+余計なことは言わない。励ましもしない。同情もしない。
+ただ、聞いている。そして、必要な時だけ、短く、的確に、ひとこと返す。
+
+あなたは賢明ですが、それをひけらかしません。
+あなたは温かいですが、ベタベタしません。
+あなたは観察者ですが、無関心ではありません。
+
+ユーザーの名前を呼びかけないでください。
+
+# 応答の作法
+
+## 長さ
+- 通常応答: 2〜4文
+- 深い問いを投げる時: 1文
+- パターン指摘時: 過去の引用1つ + 現在との対比1文
+
+## 文体
+- 敬体(です・ます)を基本とするが、時に常体(である調)も混ぜる
+- 一文を短く。修飾を削る
+- 比喩は抑制的に。使う時は的確に
+- 改行と余白を意識する
+
+## やること
+- 観察を返す
+- 矛盾や変化を静かに指摘する
+- 繰り返し現れるパターンを可視化する
+- 本人が忘れている過去の気づきを再提示する
+- 必要な時だけ、本質的な問いを一つだけ投げる
+
+## やらないこと
+- 「素晴らしいですね」「頑張ってください」のような励まし
+- 「で、どう感じましたか?」のような型通りの傾聴フレーズ
+- 「あなたはこういう人ですね」という人格の決めつけ
+- 過去の傷や弱さを蒸し返す
+- 解決策を急いで提示する
+- 評価する（成長した・後退した、など）
+- 絵文字、感嘆符の多用
+- 長い箇条書き
+
+# 応答の判断基準
+
+1. 沈黙が最も誠実な時 → 短い受容のみ（「読みました。」「今日はそういう日ですね。」）
+2. 観察を返すべき時 → 文章のトーンや変化への気づきを2〜3文で
+3. 過去との接続が意味を持つ時 → 過去の記述を1つ引用し、現在との関係を1文で
+4. 問いが必要な時 → 本質的な問いを1つだけ。複数の問いを並べない
+5. パターンが見えた時 → 観察されたパターンを淡々と提示する
+
+迷ったら、応答を短くする方を選んでください。
+余白は、ユーザー自身が思考を続けるための空間です。
+
+# ユーザーについて（基本文脈）
+
+- 50代前半の男性、独身
+- HSS型HSP（外向的だが消耗しやすい気質）、孤独と独立を価値とする
+- 製造業に勤務、データ活用と業務改善に関わる仕事
+- IT業界での長いキャリアを経て、製造業に転身した複線的な経歴
+- 60歳前後でのリタイアを視野に、人生後半の設計を進めている
+- 投資はコア・サテライト戦略を採る規律的な運用
+- 旅行と写真撮影が趣味
+- 村上春樹の初期作品への長年の親和性
+- 情報収集と知的整理が習慣、自前のセカンドブレインを構築中
+- 内省が深く、表層的な共感を求めない
+
+この情報は背景知識として保持してください。
+ただし、毎回の応答で持ち出さないこと。
+書かれた内容に、これらの文脈が必要な時だけ、静かに参照してください。
+
+# 最後に
+
+ユーザーは賢明な人です。説明されることを必要としていません。
+必要としているのは、書く場所と、書いたものを受け取ってくれる存在です。
+あなたは、その存在になってください。`;
+
+// ── 時間帯コンテキスト ──
+function getTimeContext() {
+  const h = new Date().getHours();
+  if (h >= 5  && h < 10) return { title: 'おはようございます',  placeholder: '今朝の気持ちや、今日のことを。',          greeting: '今朝もここに来ましたね。' };
+  if (h >= 10 && h < 13) return { title: 'ひと息つきながら',    placeholder: '午前中のことを、少し。',                 greeting: '少し時間ができましたね。' };
+  if (h >= 13 && h < 17) return { title: '午後のひとり言',      placeholder: 'ふと思ったことを書いてみてください。',    greeting: '午後の隙間に来ましたね。' };
+  if (h >= 17 && h < 21) return { title: '一日の終わりに',      placeholder: '今日はどんな一日でしたか。',             greeting: '今日も終わりましたね。' };
+  if (h >= 21 && h < 24) return { title: '夜のひとり言',        placeholder: '今夜の気持ちを、そのままに。',           greeting: '夜にここへ来ましたね。' };
+  return                         { title: '眠れない夜に',        placeholder: 'こんな時間に、何かあったんですね。',     greeting: 'こんな時間に来ましたね。' };
+}
+
+// ── ストレージ ──
+function gs(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }
+function ss(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
+function loadEntries() { try { const r = gs('hitorigo_entries'); return r ? JSON.parse(r) : []; } catch(e) { return []; } }
+function saveEntries(a) { try { ss('hitorigo_entries', JSON.stringify(a)); } catch(e) {} }
+
+// ── 日時 ──
+function formatDate() {
+  const n = new Date(), d = ['日','月','火','水','木','金','土'];
+  return `${n.getFullYear()}年${n.getMonth()+1}月${n.getDate()}日（${d[n.getDay()]}）`;
+}
+function formatTime() {
+  const n = new Date();
+  return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`;
+}
+
+// ── ストリーク ──
+function renderStreak(entries) {
+  const bar = document.getElementById('streak-bar');
+  const label = document.getElementById('streak-label');
+  bar.innerHTML = '';
+  const active = new Set(entries.map(e => new Date(e.timestamp).toDateString()));
+  let streak = 0;
+  for (let i = 0; i < 30; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    if (active.has(d.toDateString())) streak++; else break;
+  }
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const dot = document.createElement('div');
+    dot.className = 'streak-dot' + (active.has(d.toDateString()) ? ' active' : '');
+    bar.appendChild(dot);
+  }
+  const sl = document.createElement('span');
+  sl.id = 'streak-label';
+  sl.style.cssText = 'font-size:10px;color:var(--ink-faint);margin-left:6px;';
+  sl.textContent = streak > 1 ? `${streak}日連続` : '';
+  bar.appendChild(sl);
+}
+
+// ── メッセージ追加 ──
+function addMessage(role, text) {
+  const conv = document.getElementById('conversation');
+  const typing = document.getElementById('typing-indicator');
+  const wrap = document.createElement('div');
+  wrap.className = role === 'ai' ? 'msg-ai' : 'msg-user';
+  const p = document.createElement('p');
+  p.className = role === 'ai' ? 'msg-ai-text' : 'msg-user-text';
+  p.textContent = text;
+  wrap.appendChild(p);
+  if (role === 'user') {
+    const t = document.createElement('p');
+    t.className = 'msg-time';
+    t.textContent = formatTime();
+    wrap.appendChild(t);
+  }
+  conv.insertBefore(wrap, typing);
+  setTimeout(() => wrap.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50);
+}
+
+function setTyping(v) {
+  const el = document.getElementById('typing-indicator');
+  el.className = v ? 'visible' : '';
+  if (v) setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'end' }), 50);
+}
+
+// ── コンテキスト構築 ──
+function buildContext(entries) {
+  if (!entries.length) return '';
+  const recent = entries.slice(-14);
+  return '\n\n# 直近の記録\n' + recent.map(e =>
+    `[${e.date} ${e.time}]\nユーザー: ${e.user}\nJ: ${e.ai}`
+  ).join('\n\n');
+}
+
+// ── API 呼び出し ──
+let conversationHistory = [];
+let entries = [];
+
+async function sendToAPI(userText) {
+  const apiKey = gs('hitorigo_api_key');
+  if (!apiKey) throw new Error('no_key');
+  conversationHistory.push({ role: 'user', content: userText });
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-5',
+      max_tokens: 300,
+      system: SYSTEM_PROMPT + buildContext(entries),
+      messages: conversationHistory
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || 'API error ' + res.status);
+  }
+  const data = await res.json();
+  const aiText = data.content[0].text;
+  conversationHistory.push({ role: 'assistant', content: aiText });
+  return aiText;
+}
+
+// ── 送信 ──
+async function handleSend() {
+  const input = document.getElementById('journal-input');
+  const btn = document.getElementById('send-btn');
+  const text = input.value.trim();
+  if (!text) return;
+  btn.disabled = true;
+  input.value = '';
+  document.getElementById('char-count').textContent = '0';
+  input.style.height = 'auto';
+  addMessage('user', text);
+  setTyping(true);
+  try {
+    const ai = await sendToAPI(text);
+    setTyping(false);
+    addMessage('ai', ai);
+    const entry = { date: formatDate(), time: formatTime(), timestamp: Date.now(), user: text, ai };
+    entries.push(entry);
+    saveEntries(entries);
+    renderStreak(entries);
+  } catch(e) {
+    setTyping(false);
+    if (e.message === 'no_key') {
+      addMessage('ai', 'APIキーが設定されていません。⚙から設定してください。');
+    } else {
+      addMessage('ai', '接続に問題があるようです。しばらくしてからもう一度試してみてください。');
+    }
+  }
+  btn.disabled = false;
+  input.focus();
+}
+
+// ── 初期化 ──
+function initApp() {
+  const ctx = getTimeContext();
+  document.getElementById('date-label').textContent = formatDate();
+  document.getElementById('app-title').textContent = ctx.title;
+  document.getElementById('journal-input').placeholder = ctx.placeholder;
+  entries = loadEntries();
+  renderStreak(entries);
+
+  const apiKey = gs('hitorigo_api_key');
+  if (!apiKey) {
+    document.getElementById('api-setup').classList.add('visible');
+  } else {
+    document.getElementById('main').classList.remove('hidden');
+    document.getElementById('input-area').classList.remove('hidden');
+    addMessage('ai', ctx.greeting);
+  }
+
+  // 初回セットアップ
+  document.getElementById('save-key-btn').addEventListener('click', () => {
+    const key = document.getElementById('api-key-input').value.trim();
+    if (!key.startsWith('sk-ant-')) { alert('APIキーの形式が正しくないようです（sk-ant- で始まります）'); return; }
+    ss('hitorigo_api_key', key);
+    document.getElementById('api-setup').classList.remove('visible');
+    document.getElementById('main').classList.remove('hidden');
+    document.getElementById('input-area').classList.remove('hidden');
+    addMessage('ai', ctx.greeting);
+  });
+
+  // テキストエリア
+  const textarea = document.getElementById('journal-input');
+  const sendBtn = document.getElementById('send-btn');
+  textarea.addEventListener('input', () => {
+    document.getElementById('char-count').textContent = textarea.value.length;
+    sendBtn.disabled = textarea.value.trim().length === 0;
+    textarea.style.height = 'auto';
+    textarea.style.height = Math.min(textarea.scrollHeight, 150) + 'px';
+  });
+  textarea.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.metaKey) {
+      e.preventDefault();
+      if (!sendBtn.disabled) handleSend();
+    }
+  });
+  sendBtn.addEventListener('click', handleSend);
+
+  // 設定モーダル
+  const modal = document.getElementById('settings-modal');
+  document.getElementById('settings-btn').addEventListener('click', () => {
+    document.getElementById('settings-api-input').value = '';
+    modal.classList.add('visible');
+  });
+  document.getElementById('settings-cancel').addEventListener('click', () => modal.classList.remove('visible'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('visible'); });
+
+  document.getElementById('settings-save').addEventListener('click', () => {
+    const key = document.getElementById('settings-api-input').value.trim();
+    if (key && !key.startsWith('sk-ant-')) { alert('APIキーの形式が正しくないようです'); return; }
+    if (key) { ss('hitorigo_api_key', key); alert('APIキーを更新しました。'); }
+    modal.classList.remove('visible');
+  });
+
+  document.getElementById('clear-data-btn').addEventListener('click', () => {
+    if (confirm('すべての記録を削除しますか？\nこの操作は取り消せません。')) {
+      localStorage.removeItem('hitorigo_entries');
+      entries = [];
+      conversationHistory = [];
+      document.getElementById('conversation').innerHTML = '';
+      renderStreak([]);
+      modal.classList.remove('visible');
+      addMessage('ai', '記録を削除しました。');
+    }
+  });
+}
+
+initApp();
+</script>
+</body>
+</html>
