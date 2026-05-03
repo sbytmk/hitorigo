@@ -446,29 +446,74 @@ body {
 #history-view.visible { display: block; }
 
 #history-header {
-  padding: 14px 20px 10px;
+  padding: 12px 20px 10px;
   border-bottom: 0.5px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+#history-last-copy {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+#history-copy-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 
-#history-title {
+#history-copy-label {
   font-size: 13px;
-  font-weight: 400;
   color: var(--ink-muted);
+}
+
+#copy-since-btn {
+  background: var(--ink);
+  color: var(--surface);
+  border: none;
+  border-radius: 16px;
+  padding: 7px 14px;
+  font-family: var(--font-round);
+  font-size: 12px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
+}
+
+#copy-since-btn:active { opacity: 0.7; }
+
+#history-month-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#month-select {
+  flex: 1;
+  background: var(--surface-alt);
+  border: none;
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-family: var(--font-round);
+  font-size: 12px;
+  color: var(--ink);
+  outline: none;
 }
 
 #copy-month-btn {
   background: var(--surface-alt);
   border: none;
   border-radius: 16px;
-  padding: 6px 14px;
+  padding: 7px 14px;
   font-family: var(--font-round);
   font-size: 12px;
   color: var(--ink-muted);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  white-space: nowrap;
 }
 
 #copy-month-btn:active { opacity: 0.6; }
@@ -575,8 +620,14 @@ body {
 <!-- History view -->
 <div id="history-view">
   <div id="history-header">
-    <span id="history-title">今月の記録</span>
-    <button id="copy-month-btn">今月をコピー</button>
+    <div id="history-copy-row">
+      <span id="history-copy-label">前回コピー：なし</span>
+      <button id="copy-since-btn">前回以降をコピー</button>
+    </div>
+    <div id="history-month-row">
+      <select id="month-select"></select>
+      <button id="copy-month-btn">その月をコピー</button>
+    </div>
   </div>
   <div id="history-list"></div>
 </div>
@@ -916,7 +967,8 @@ function initApp() {
   // タブ
   document.getElementById('tab-write').addEventListener('click', () => switchTab('write'));
   document.getElementById('tab-history').addEventListener('click', () => switchTab('history'));
-  document.getElementById('copy-month-btn').addEventListener('click', copyThisMonth);
+  document.getElementById('copy-since-btn').addEventListener('click', copySinceLast);
+  document.getElementById('copy-month-btn').addEventListener('click', copySelectedMonth);
 }
 
 // ── タブ切り替え ──
@@ -930,11 +982,49 @@ function switchTab(tab) {
   if (!isWrite) renderHistory();
 }
 
+// ── 月リスト生成 ──
+function buildMonthOptions() {
+  const sel = document.getElementById('month-select');
+  sel.innerHTML = '';
+  const months = new Set(entries.map(e => {
+    const m = e.date.match(/(\d+年\d+月)/);
+    return m ? m[1] : null;
+  }).filter(Boolean));
+  if (!months.size) {
+    const opt = document.createElement('option');
+    opt.textContent = '記録がありません';
+    sel.appendChild(opt);
+    return;
+  }
+  // 新しい順に並べる
+  Array.from(months).reverse().forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    const count = entries.filter(e => e.date.startsWith(m)).length;
+    opt.textContent = `${m}（${count}件）`;
+    sel.appendChild(opt);
+  });
+}
+
+// ── 前回コピー日を更新して表示 ──
+function updateLastCopyLabel() {
+  const last = gs('hitorigo_last_copy');
+  const label = document.getElementById('history-copy-label');
+  if (last) {
+    const d = new Date(parseInt(last));
+    const str = `${d.getFullYear()}年${d.getMonth()+1}月${d.getDate()}日 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    label.textContent = `前回コピー：${str}`;
+  } else {
+    label.textContent = '前回コピー：なし（全件コピーします）';
+  }
+}
+
 // ── 履歴レンダリング ──
 function renderHistory() {
   const list = document.getElementById('history-list');
-  const titleEl = document.getElementById('history-title');
   list.innerHTML = '';
+  updateLastCopyLabel();
+  buildMonthOptions();
 
   if (!entries.length) {
     list.innerHTML = '<div class="history-empty">まだ記録がありません。<br>「書く」タブから始めましょう。</div>';
@@ -975,31 +1065,41 @@ function renderHistory() {
       list.appendChild(entryEl);
     });
   });
-
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}年${now.getMonth()+1}月`;
-  const monthCount = entries.filter(e => e.date.startsWith(thisMonth)).length;
-  titleEl.textContent = `${thisMonth}（${monthCount}件）`;
 }
 
-// ── 今月コピー ──
-function copyThisMonth() {
-  const now = new Date();
-  const thisMonth = `${now.getFullYear()}年${now.getMonth()+1}月`;
-  const monthEntries = entries.filter(e => e.date.startsWith(thisMonth));
-  if (!monthEntries.length) { alert('今月の記録がありません。'); return; }
-
-  const text = monthEntries.map(e =>
+// ── コピー共通処理 ──
+function copyEntries(target, btnId, resetLabel) {
+  if (!target.length) { alert('対象の記録がありません。'); return; }
+  const text = target.map(e =>
     `【${e.date} ${e.time}】\n${e.user}\n\n↓\n\n${e.ai}`
   ).join('\n\n---\n\n');
-
   navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('copy-month-btn');
-    btn.textContent = 'コピーしました';
-    setTimeout(() => { btn.textContent = '今月をコピー'; }, 2000);
-  }).catch(() => {
-    alert('コピーに失敗しました。');
-  });
+    ss('hitorigo_last_copy', Date.now().toString());
+    updateLastCopyLabel();
+    const btn = document.getElementById(btnId);
+    const orig = btn.textContent;
+    btn.textContent = 'コピーしました ✓';
+    setTimeout(() => { btn.textContent = resetLabel; }, 2500);
+  }).catch(() => { alert('コピーに失敗しました。'); });
+}
+
+// ── 前回以降をコピー ──
+function copySinceLast() {
+  const last = gs('hitorigo_last_copy');
+  const since = last ? parseInt(last) : 0;
+  const target = entries.filter(e => e.timestamp > since);
+  const label = since === 0 ? '全件（初回）' : '前回以降';
+  if (!target.length) { alert('前回コピー以降の新しい記録がありません。'); return; }
+  copyEntries(target, 'copy-since-btn', '前回以降をコピー');
+}
+
+// ── 選択月をコピー ──
+function copySelectedMonth() {
+  const sel = document.getElementById('month-select');
+  const month = sel.value;
+  if (!month) { alert('月を選択してください。'); return; }
+  const target = entries.filter(e => e.date.startsWith(month));
+  copyEntries(target, 'copy-month-btn', 'その月をコピー');
 }
 
 initApp();
